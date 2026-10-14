@@ -1,0 +1,17 @@
+[Unit]
+Description=Vid, a local guard between an AI agent and its model
+Documentation=https://www.zeravatech.ca/
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vid serve
+Restart=on-failure
+RestartSec=2
+# The guard needs no privileges and writes only under the user's own
+# ~/.config/vid and ~/.local/share/vid.
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

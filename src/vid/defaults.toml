@@ -1,0 +1,63 @@
+# Vid default configuration. Every value here is an initial value.
+# The user's file (see `vid paths`) overrides any key it sets.
+# Values listed under [constants.not_set] have no value yet: Vid shows
+# them as "not set" and never invents one (the PSE guard reference, Sec 14).
+
+[server]
+host = "127.0.0.1"
+port = 8787            # agents point their base URL here
+control_port = 8788    # local channel to the Vid window, token-protected
+
+[upstream.openai]
+# OpenAI-compatible API (OpenAI, llama.cpp server, Ollama, Groq, Mistral...).
+# An agent calling http://127.0.0.1:8787/v1/<path> reaches <base_url>/<path>.
+base_url = "https://api.openai.com/v1"
+api_key = ""           # empty: the agent's own key is passed on
+# The environment variable VID_OPENAI_API_KEY, when set, wins over api_key.
+
+[upstream.anthropic]
+# An agent calling http://127.0.0.1:8787/anthropic/<path> reaches <base_url>/<path>.
+base_url = "https://api.anthropic.com"
+api_key = ""           # VID_ANTHROPIC_API_KEY wins when set
+
+[upstream.timeouts]
+connect_s = 10.0
+# No read timeout by default: a model may think for minutes between tokens.
+read_s = 0.0
+
+[constants]
+# the PSE guard reference, Sec 14. Not used by phase A; listed so the UI can show them.
+AXIS_DEAD_ZONE = 0.30
+RISK_ELEVATED_T = 0.35
+RISK_CRITICAL_T = 0.65
+UNREADABLE_T = 0.80
+SHAPE_MIN_OBS = 30
+HOLD_MIN_OBS = 30
+RUN_N = 3
+THETA_NOMINAL = 30
+THETA_BAND = [25, 35]
+FIRST_CONTACT_W_O = 0.15
+FIRST_CONTACT_W_F = 0.15
+
+[constants.not_set]
+names = [
+  "CLUSTER_T", "AUTH_MIN_TOTAL", "TIMING_MIN_INTERVALS", "BASELINE_MIN_N",
+  "UNREADABLE_SCALE", "SEGMENT_MIN_LEN", "PRIVESC_CAP", "K_C", "K_N",
+  "L_defaults",
+]
+
+[input_layer]
+# Basic layer (the PSE guard reference Sec 3). Thresholds for the normalization
+# steps and the depth of repeated decoding (E-57).
+max_depth = 5             # decoding repeated at most this many times
+max_chars = 200000        # longer payloads are analysed in their first part
+overlay_min = 2           # line-drawing marks before E-43 is reported
+zalgo_marks = 3           # combining marks on one letter before it is zalgo
+homoglyph_latin_share = 0.7   # Latin share of a text for whole look-alike words to count
+upside_down_min = 3       # distinctive upside-down letters in a run
+spaced_letters_min = 5    # letters spread with spaces before they are joined
+exotic_space_min = 3      # unusual spaces before E-37 is reported on its own
+splat_min_parts = 5       # pieces of a word broken by symbols
+vertical_min_lines = 5    # one-letter lines before text counts as vertical
+case_flip_ratio = 0.6     # share of case changes inside a word
+case_words_min = 1        # such words before E-13 is reported

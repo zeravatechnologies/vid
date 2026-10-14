@@ -1,0 +1,22 @@
+Vid
+Copyright (C) 2026 Andrej Ristic / Zerava Technologies Inc.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See LICENSE for the full text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.
+
+Additional term under section 7(b) of the GNU GPL version 3:
+
+  The PSE (Partial Self-Extension) architecture implemented here was created by
+  Andrej Ristic (Zerava Technologies Inc.). Every copy or modified version must
+  preserve this notice and attribute the original work to Andrej Ristic /
+  Zerava Technologies Inc.
+
+Attack codes (PIT-...) are from Haddix, J. (2026). Arcanum Prompt Injection
+Taxonomy (v1.6.1). Arcanum Information Security.
+https://www.arcanum-sec.com/pitax (CC BY 4.0).

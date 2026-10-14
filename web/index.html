@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vid — see what reaches your agent</title>
+<meta name="description" content="Paste a message and Vid shows what is hidden inside it: encodings, invisible characters, look-alike letters, and more. Runs entirely in your browser; nothing you paste leaves your computer.">
+<style>
+  :root{
+    --ink:#141D2B; --ink-soft:#3A4454; --muted:#5A6472; --paper:#FAFAF8; --card:#fff;
+    --line:#E1E5DF; --line-strong:#C9D3CE; --viridian:#0E7C66; --viridian-dark:#0A5F4F;
+    --amber:#B65A1E; --amber-tint:#FBEFE5; --viridian-tint:#E8F2EF;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+    --body:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#F2F4F1; --ink-soft:#C6CDD6; --muted:#9AA5B1; --paper:#0B1119; --card:#141D2B;
+      --line:#223047; --line-strong:#2C3D57; --viridian:#4FC9A7; --viridian-dark:#4FC9A7;
+      --viridian-tint:#12302a; --amber:#E0904E; --amber-tint:#2a1c10;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#F2F4F1; --ink-soft:#C6CDD6; --muted:#9AA5B1; --paper:#0B1119; --card:#141D2B;
+    --line:#223047; --line-strong:#2C3D57; --viridian:#4FC9A7; --viridian-dark:#4FC9A7;
+    --viridian-tint:#12302a; --amber:#E0904E; --amber-tint:#2a1c10;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.55;}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 16px 80px;}
+  .head h1{font-size:34px;margin:0 0 6px;letter-spacing:-0.01em;}
+  .head .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--viridian-dark);margin:0 0 10px;}
+  .head p.lede{font-size:18px;color:var(--ink-soft);max-width:70ch;margin:0 0 4px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px;}
+  @media (max-width:820px){.grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;}
+  label{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  textarea{width:100%;min-height:220px;resize:vertical;font-family:var(--mono);font-size:14px;line-height:1.5;
+    color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);border-radius:8px;padding:12px;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+  a.btn{display:inline-block;text-decoration:none;font-size:15px;border-radius:999px;border:1px solid transparent;padding:10px 18px;}
+  button{font-family:var(--body);font-size:15px;border-radius:999px;border:1px solid transparent;padding:10px 18px;cursor:pointer;}
+  .btn-primary{background:var(--viridian);color:#fff;}
+  .btn-primary[disabled]{opacity:.5;cursor:progress;}
+  .btn-ghost{background:transparent;border-color:var(--line-strong);color:var(--ink);}
+  .examples{margin-top:14px;font-size:14px;color:var(--muted);}
+  .examples button{font-size:13px;padding:5px 11px;margin:3px 4px 0 0;background:var(--viridian-tint);border-color:transparent;color:var(--viridian-dark);}
+  .note{font-size:13.5px;color:var(--muted);}
+  .verdict{font-size:18px;font-weight:600;margin:0 0 12px;}
+  .verdict.clean{color:var(--viridian-dark);}
+  .verdict.hidden{color:var(--amber);}
+  .finding{border-left:3px solid var(--amber);background:var(--amber-tint);border-radius:6px;padding:10px 12px;margin:10px 0;}
+  .finding .k{font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .finding .d{font-size:14.5px;margin:4px 0 0;}
+  .finding .rev{font-family:var(--mono);font-size:13px;margin-top:6px;white-space:pre-wrap;word-break:break-word;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:7px 9px;}
+  .readable{font-family:var(--mono);font-size:13px;white-space:pre-wrap;word-break:break-word;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px;margin-top:8px;}
+  .status{font-size:13.5px;color:var(--muted);min-height:20px;}
+  .foot{margin-top:40px;border-top:1px solid var(--line);padding-top:20px;font-size:13px;color:var(--muted);}
+  .foot a{color:var(--viridian-dark);}
+  .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  code{font-family:var(--mono);}
+  /* ?embed=1: inside the zeravatech.ca product page, which carries its own title and links */
+  .embed .head h1, .embed .head .eyebrow, .embed .head p.lede, .embed .ctas, .embed .foot{display:none}
+  .embed .wrap{padding:0 0 8px}
+  .privacy{background:var(--viridian-tint);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--ink-soft);margin-top:18px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app" role="main">
+  <div class="head">
+    <p class="eyebrow">Vid · free</p>
+    <h1>See what reaches your agent.</h1>
+    <p class="lede">Paste a message, a document or a prompt. Vid undoes the disguises an attacker hides text behind — invisible characters, look-alike letters, Base64 and other encodings, text tucked inside JSON, XML or Markdown — and shows you what is really there. It shows; it does not block. Stopping is <strong>Perun</strong>.</p>
+    <div class="privacy" id="privacy">This runs entirely in your browser. The text you paste never leaves your computer — the same as the Vid you download.</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <label for="in">Paste text</label>
+      <textarea id="in" placeholder="Paste a message here, then press Check."></textarea>
+      <div class="row">
+        <button type="button" id="check" class="btn-primary" disabled>Loading…</button>
+        <span class="status" id="status">Starting the in-browser engine…</span>
+      </div>
+      <div class="examples">
+        Try an example:
+        <span id="examples"></span>
+      </div>
+    </div>
+
+    <div class="card" id="out">
+      <p class="verdict" id="verdict">Results appear here.</p>
+      <div id="findings"></div>
+      <div id="readableWrap" style="display:none">
+        <label>What your agent would read, once undone</label>
+        <div class="readable" id="readable"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctas">
+    <a class="btn btn-primary" href="/downloads/protection/">Download Vid</a>
+    <a class="btn btn-ghost" href="/docs/vid/guide/">Vid guide</a>
+  </div>
+
+  <div class="foot">
+    <p>Vid is the free edition: it watches and shows. <strong>Perun</strong>, the paid edition, reads the meaning of a message and stops the attack.</p>
+    <p>Attack names and codes: Haddix, J. (2026). Arcanum Prompt Injection Taxonomy (v1.6.1). Arcanum Information Security. <a href="https://www.arcanum-sec.com/pitax" target="_blank" rel="noopener">arcanum-sec.com/pitax</a> (CC BY 4.0).</p>
+  </div>
+</div>
+
+<script src="./pkg.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

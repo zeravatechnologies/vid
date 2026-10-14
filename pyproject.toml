@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vid"
+dynamic = ["version"]
+description = "Vid: a local guard between an AI agent and its model."
+requires-python = ">=3.11"
+authors = [{ name = "Zerava Technologies Inc." }]
+dependencies = [
+  "starlette>=0.40",
+  "uvicorn>=0.30",
+  "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.24", "openai>=1.40", "anthropic>=0.40"]
+
+[project.scripts]
+vid = "vid.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "vid.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vid = ["defaults.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

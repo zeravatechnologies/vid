@@ -1,0 +1,161 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q
+
+  deb:
+    # Built on the oldest supported Ubuntu so the bundled binaries run on every
+    # supported system (plan, Faza P).
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install . pyinstaller
+      - run: packaging/deb/build.sh python
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vid-deb-amd64
+          path: dist/*.deb
+
+  install:
+    # Phase A exit criterion: the .deb installs on a clean system and needs
+    # nothing else; the guard then passes a call through.
+    needs: deb
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-22.04
+            runs-on: ubuntu-22.04
+            container: ""
+          - name: ubuntu-24.04
+            runs-on: ubuntu-24.04
+            container: ""
+          - name: debian-12
+            runs-on: ubuntu-24.04
+            container: debian:12
+    name: install (${{ matrix.name }})
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container || null }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vid-deb-amd64
+      - name: Install the package on the clean system
+        shell: bash
+        run: |
+          SUDO=$(command -v sudo || true)
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y ./vid_*.deb
+          vid version
+          test -x /opt/vid/vid
+          test -f /usr/lib/systemd/user/vid.service
+      - name: Service is enabled for user logins
+        if: matrix.container == ''
+        run: systemctl --global is-enabled vid.service
+      - name: A call passes through
+        shell: bash
+        run: |
+          SUDO=$(command -v sudo || true)
+          # Test harness only, installed after Vid so it cannot satisfy Vid.
+          command -v python3 >/dev/null || { $SUDO apt-get install -y -qq python3 curl >/dev/null; }
+          command -v curl >/dev/null || $SUDO apt-get install -y -qq curl >/dev/null
+          mkdir -p up/v1 && echo '{"object":"list","data":[{"id":"fake-1"}]}' > up/v1/models
+          (cd up && python3 -m http.server 18080 --bind 127.0.0.1 >/dev/null 2>&1 &)
+          mkdir -p ~/.config/vid
+          printf '[upstream.openai]\nbase_url = "http://127.0.0.1:18080/v1"\n' > ~/.config/vid/vid.toml
+          (vid serve > vid.log 2>&1 &)
+          for i in $(seq 1 50); do curl -s http://127.0.0.1:8787/ >/dev/null && break; sleep 0.2; done
+          curl -sf http://127.0.0.1:8787/v1/models | grep -q fake-1
+          vid status | grep -q observe
+          cat vid.log
+      - name: Removal leaves nothing behind
+        shell: bash
+        run: |
+          SUDO=$(command -v sudo || true)
+          pkill -f "vid serve" || true
+          $SUDO apt-get purge -y vid
+          test ! -e /opt/vid
+          test ! -e /usr/bin/vid
+          test ! -e /usr/lib/systemd/user/vid.service
+
+  windows:
+    # Builds the PyInstaller onedir and packages it into an Inno Setup
+    # installer that runs Vid at logon. ARM64 comes later.
+    needs: test
+    runs-on: windows-latest
+    env:
+      # Signing is skipped while this secret is absent (Dhiraj adds it once
+      # SignPath/Certum is set up — no code change needed). See Dhiraj-tasks.
+      SIGNPATH_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install . pyinstaller
+      - run: python -m PyInstaller --noconfirm --onedir --name vid --paths src --collect-data vid --distpath dist packaging/pyinstaller/vid_entry.py
+      - run: dist\vid\vid.exe version
+      - name: Read version
+        id: ver
+        shell: bash
+        run: echo "v=$(python -c "import sys; sys.path.insert(0,'src'); import vid; print(vid.__version__)")" >> "$GITHUB_OUTPUT"
+      - name: Build the installer (Inno Setup)
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DVidVersion=${{ steps.ver.outputs.v }} packaging\windows\vid.iss
+      - run: dir dist\installer
+      - name: Sign the installer (skipped until signing secrets exist)
+        if: ${{ env.SIGNPATH_TOKEN != '' }}
+        run: echo "SignPath signing would run here once SIGNPATH_API_TOKEN is set."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vid-windows-x64-installer-unsigned
+          path: dist/installer/*.exe
+
+  release:
+    # A tag vX.Y.Z publishes the .deb and the .exe, with SHA256SUMS.txt.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [install, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Checksums
+        run: cd out && sha256sum *.deb *.exe | tee SHA256SUMS.txt
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/*.deb out/*.exe out/SHA256SUMS.txt \
+            --repo "${GITHUB_REPOSITORY}" --title "Vid ${GITHUB_REF_NAME#v}" \
+            --notes "Vid sees what reaches your AI agent: it undoes 42 kinds of disguise and shows what was hidden, and notes secrets leaving in a reply. It blocks nothing. Ubuntu/Debian (.deb) and Windows (.exe). The builds are not code-signed yet: check the SHA-256 in SHA256SUMS.txt before you install. Guide: https://www.zeravatech.ca/docs/vid/guide/"
