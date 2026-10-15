@@ -54,3 +54,9 @@ Free and open source under the GNU General Public License v3 or later
 Attack codes (PIT-…) are from Haddix, J. (2026). Arcanum Prompt Injection
 Taxonomy (v1.6.1). Arcanum Information Security.
 https://www.arcanum-sec.com/pitax (CC BY 4.0).
+
+## Author
+
+Created by **Andrej Ristić**, [Zerava Technologies Inc.](https://www.zeravatech.ca), Toronto.
+
+Source: <https://github.com/zeravatechnologies/vid>
